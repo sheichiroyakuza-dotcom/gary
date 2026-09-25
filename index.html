@@ -67,6 +67,7 @@
     th, td { padding:8px 5px; font-size:.8rem; }
   }
 </style>
+<base target="_blank">
 </head>
 <body>
 <header>
@@ -76,6 +77,7 @@
   <div class="upload-row" id="adminPanel" style="display:none">
     <label class="upload-btn" for="fileInput">&#8682; Upload File Excel Jadwal</label>
     <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+    <button class="upload-btn" id="exportBtn" style="background:#7ee0a3; color:#0c3d22; margin-left:6px;">&#8681; Download index.html</button>
     <div id="uploadStatus"></div>
   </div>
 </header>
@@ -214,6 +216,32 @@ adminLink.addEventListener('click', e => {
     document.getElementById('uploadStatus').textContent = 'Mode admin aktif.';
   } else {
     alert('PIN salah.');
+  }
+});
+
+
+/* ====== EXPORT: unduh index.html berisi data terkini (untuk upload ke GitHub) ====== */
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const status = document.getElementById('uploadStatus');
+  status.classList.remove('err');
+  try {
+    if(location.protocol === 'file:') throw new Error('Buka lewat link Vercel, bukan file lokal.');
+    status.textContent = 'Menyiapkan file…';
+    const src = await (await fetch(location.href, {cache:'no-store'})).text();
+    const newSrc = src
+      .replace(/const DEFAULT_DATA = [\s\S]*?;/, 'const DEFAULT_DATA = ' + JSON.stringify(DATA) + ';')
+      .replace(/const DEFAULT_TEACHERS = [\s\S]*?;/, 'const DEFAULT_TEACHERS = ' + JSON.stringify(TEACHERS) + ';');
+    if(newSrc.indexOf(JSON.stringify(DATA).slice(0,50)) < 0) throw new Error('Gagal menyisipkan data.');
+    const blob = new Blob([newSrc], {type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'index.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    status.textContent = 'index.html terdownload (' + TEACHERS.length + ' guru, ' + DATA.length + ' entri). Upload ke GitHub.';
+  } catch(err){
+    status.textContent = 'Export gagal: ' + err.message;
+    status.classList.add('err');
   }
 });
 
